@@ -1,14 +1,14 @@
-From cb32f03f326ac562d3fdc1fb94daf2d7000eba44 Mon Sep 17 00:00:00 2001
-From: Gerasim Troeglazov <3dEyes@gmail.com>
-Date: Sat, 6 Oct 2018 20:54:27 +1000
-Subject: Fix build for Haiku
+From b8a1d045c5e7bac7bdc85149a6071246b3d58191 Mon Sep 17 00:00:00 2001
+From: chickfilla <jtmonegro@gmail.com>
+Date: Fri, 12 Feb 2021 22:01:12 -0500
+Subject: applied 0.45 patch
 
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 34e1a8f..40610ba 100644
+index d69352c..861ec90 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -107,6 +107,19 @@ endif()
+@@ -120,6 +120,19 @@ endif()
  if (APPLE)
      set(MORROWIND_DATA_FILES "./data" CACHE PATH "location of Morrowind data files")
      set(OPENMW_RESOURCE_FILES "../Resources/resources" CACHE PATH "location of OpenMW resources files")
@@ -28,26 +28,11 @@ index 34e1a8f..40610ba 100644
  elseif(UNIX)
      # Paths
      SET(BINDIR "${CMAKE_INSTALL_PREFIX}/bin" CACHE PATH "Where to install binaries")
-diff --git a/apps/launcher/CMakeLists.txt b/apps/launcher/CMakeLists.txt
-index bfc08a7..a0a908a 100644
---- a/apps/launcher/CMakeLists.txt
-+++ b/apps/launcher/CMakeLists.txt
-@@ -105,6 +105,10 @@ target_link_libraries(openmw-launcher
-     components
- )
- 
-+if (HAIKU)
-+    target_link_libraries(openmw-launcher be)
-+endif (HAIKU)
-+
- if (DESIRED_QT_VERSION MATCHES 4)
-     target_link_libraries(openmw-launcher ${QT_QTGUI_LIBRARY} ${QT_QTCORE_LIBRARY})
-     if(WIN32)
 diff --git a/apps/launcher/graphicspage.cpp b/apps/launcher/graphicspage.cpp
-index 072f1f3..7ef82be 100644
+index 6bc22ba..1afc59a 100644
 --- a/apps/launcher/graphicspage.cpp
 +++ b/apps/launcher/graphicspage.cpp
-@@ -12,7 +12,11 @@
+@@ -15,7 +15,11 @@
  #define MAC_OS_X_VERSION_MIN_REQUIRED __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__
  #endif // MAC_OS_X_VERSION_MIN_REQUIRED
  
@@ -58,8 +43,8 @@ index 072f1f3..7ef82be 100644
 +#endif
  
  #include <components/files/configurationmanager.hpp>
- 
-@@ -57,6 +61,9 @@ bool Launcher::GraphicsPage::setupSDL()
+ #include <components/misc/gcd.hpp>
+@@ -63,6 +67,9 @@ bool Launcher::GraphicsPage::setupSDL()
      }
  #endif
  
@@ -69,7 +54,7 @@ index 072f1f3..7ef82be 100644
      int displays = SDL_GetNumVideoDisplays();
  
      if (displays < 0)
-@@ -69,7 +76,7 @@ bool Launcher::GraphicsPage::setupSDL()
+@@ -75,7 +82,7 @@ bool Launcher::GraphicsPage::setupSDL()
          msgBox.exec();
          return false;
      }
@@ -78,8 +63,8 @@ index 072f1f3..7ef82be 100644
      screenComboBox->clear();
      for (int i = 0; i < displays; i++)
      {
-@@ -168,9 +175,30 @@ void Launcher::GraphicsPage::saveSettings()
-         mEngineSettings.setInt("screen", "Video", cScreen);
+@@ -265,9 +272,30 @@ void Launcher::GraphicsPage::saveSettings()
+         mEngineSettings.setInt("shadow map resolution", "Shadows", cShadowRes);
  }
  
 +#ifdef __HAIKU__
@@ -109,7 +94,7 @@ index 072f1f3..7ef82be 100644
      SDL_DisplayMode mode;
      int modeIndex, modes = SDL_GetNumDisplayModes(screen);
  
-@@ -210,7 +238,7 @@ QStringList Launcher::GraphicsPage::getAvailableResolutions(int screen)
+@@ -307,7 +335,7 @@ QStringList Launcher::GraphicsPage::getAvailableResolutions(int screen)
  
          result.append(resolution);
      }
@@ -119,34 +104,40 @@ index 072f1f3..7ef82be 100644
      return result;
  }
 diff --git a/apps/launcher/maindialog.cpp b/apps/launcher/maindialog.cpp
-index 2982a30..358380c 100644
+index f69213c..26cde79 100644
 --- a/apps/launcher/maindialog.cpp
 +++ b/apps/launcher/maindialog.cpp
-@@ -171,7 +171,11 @@ Launcher::FirstRunDialogResult Launcher::MainDialog::showFirstRunDialog()
+@@ -174,8 +174,15 @@ Launcher::FirstRunDialogResult Launcher::MainDialog::showFirstRunDialog()
  
          if (msgBox.clickedButton() == wizardButton)
          {
+-            if (mWizardInvoker->startProcess(QLatin1String("openmw-wizard"), false))
 +#ifdef __HAIKU__
 +            if (!mWizardInvoker->startProcess(QLatin1String("OpenMW-Wizard"), false)) {
 +#else
-             if (!mWizardInvoker->startProcess(QLatin1String("openmw-wizard"), false)) {
++            if (!mWizardInvoker->startProcess(QLatin1String("openmw-wizard"), false)) {
 +#endif
-                 return FirstRunDialogResultFailure;
-             } else {
++                return FirstRunDialogResultFailure;
++            } else {
                  return FirstRunDialogResultWizard;
-@@ -390,7 +394,11 @@ bool Launcher::MainDialog::setupGameData()
++            }
+         }
+         else if (msgBox.clickedButton() == skipButton)
+         {
+@@ -405,7 +412,11 @@ bool Launcher::MainDialog::setupGameData()
  
          if (msgBox.clickedButton() == wizardButton)
          {
+-            if (!mWizardInvoker->startProcess(QLatin1String("openmw-wizard"), false))
 +#ifdef __HAIKU__
 +            if (!mWizardInvoker->startProcess(QLatin1String("OpenMW-Wizard"), false)) {
 +#else
-             if (!mWizardInvoker->startProcess(QLatin1String("openmw-wizard"), false)) {
++            if (!mWizardInvoker->startProcess(QLatin1String("openmw-wizard"), false)) {
 +#endif
                  return false;
-             } else {
-                 return true;
-@@ -599,6 +607,10 @@ void Launcher::MainDialog::play()
+         }
+     }
+@@ -611,6 +622,10 @@ void Launcher::MainDialog::play()
  
      // Launch the game detached
  
@@ -186,10 +177,10 @@ index 1fe1fd4..22e816f 100644
 +#endif
  }
 diff --git a/apps/launcher/settingspage.cpp b/apps/launcher/settingspage.cpp
-index 843b513..59afde7 100644
+index 59d7cfd..d7a2730 100644
 --- a/apps/launcher/settingspage.cpp
 +++ b/apps/launcher/settingspage.cpp
-@@ -96,8 +96,11 @@ Launcher::SettingsPage::~SettingsPage()
+@@ -97,8 +97,11 @@ Launcher::SettingsPage::~SettingsPage()
  void Launcher::SettingsPage::on_wizardButton_clicked()
  {
      mMain->writeSettings();
@@ -202,11 +193,27 @@ index 843b513..59afde7 100644
          return;
  }
  
+diff --git a/apps/openmw/engine.cpp b/apps/openmw/engine.cpp
+index ec8c1e3..10e0313 100644
+--- a/apps/openmw/engine.cpp
++++ b/apps/openmw/engine.cpp
+@@ -363,7 +363,11 @@ void OMW::Engine::createWindow(Settings::Manager& settings)
+         pos_y = SDL_WINDOWPOS_UNDEFINED_DISPLAY(screen);
+     }
+ 
++#ifdef __HAIKU__
++	Uint32 flags = SDL_WINDOW_OPENGL|SDL_WINDOW_SHOWN;
++#else
+     Uint32 flags = SDL_WINDOW_OPENGL|SDL_WINDOW_SHOWN|SDL_WINDOW_RESIZABLE;
++#endif
+     if(fullscreen)
+         flags |= SDL_WINDOW_FULLSCREEN;
+ 
 diff --git a/apps/openmw/main.cpp b/apps/openmw/main.cpp
-index 176adfa..2c69d45 100644
+index a39dd2e..446414c 100644
 --- a/apps/openmw/main.cpp
 +++ b/apps/openmw/main.cpp
-@@ -243,6 +243,11 @@ int runApplication(int argc, char *argv[])
+@@ -249,6 +249,11 @@ int runApplication(int argc, char *argv[])
      boost::filesystem::current_path(binary_path.parent_path());
      setenv("OSG_GL_TEXTURE_STORAGE", "OFF", 0);
  #endif
@@ -218,8 +225,58 @@ index 176adfa..2c69d45 100644
  
      Files::ConfigurationManager cfgMgr;
      std::unique_ptr<OMW::Engine> engine;
+diff --git a/apps/openmw/mwbase/world.hpp b/apps/openmw/mwbase/world.hpp
+index 31d4a1b..39a2184 100644
+--- a/apps/openmw/mwbase/world.hpp
++++ b/apps/openmw/mwbase/world.hpp
+@@ -314,7 +314,7 @@ namespace MWBase
+             virtual bool castRay (float x1, float y1, float z1, float x2, float y2, float z2) = 0;
+ 
+             virtual bool castRay(const osg::Vec3f& from, const osg::Vec3f& to, int mask, const MWWorld::ConstPtr& ignore) = 0;
+-
++            
+             virtual void setActorCollisionMode(const MWWorld::Ptr& ptr, bool internal, bool external) = 0;
+             virtual bool isActorCollisionEnabled(const MWWorld::Ptr& ptr) = 0;
+ 
+diff --git a/apps/openmw/mwclass/npc.cpp b/apps/openmw/mwclass/npc.cpp
+index 297471e..db78dc5 100644
+--- a/apps/openmw/mwclass/npc.cpp
++++ b/apps/openmw/mwclass/npc.cpp
+@@ -942,9 +942,11 @@ namespace MWClass
+         const float normalizedEncumbrance = getNormalizedEncumbrance(ptr);
+ 
+         bool swimming = world->isSwimming(ptr);
++
+         bool sneaking = MWBase::Environment::get().getMechanicsManager()->isSneaking(ptr);
+         bool running = stats.getStance(MWMechanics::CreatureStats::Stance_Run);
+         bool inair = !world->isOnGround(ptr) && !swimming && !world->isFlying(ptr);
++        
+         running = running && (inair || MWBase::Environment::get().getMechanicsManager()->isRunning(ptr));
+ 
+         float walkSpeed = gmst.fMinWalkSpeed->mValue.getFloat() + 0.01f*npcdata->mNpcStats.getAttribute(ESM::Attribute::Speed).getModified()*
+diff --git a/apps/openmw/mwmechanics/character.cpp b/apps/openmw/mwmechanics/character.cpp
+index b5addea..314a8e4 100644
+--- a/apps/openmw/mwmechanics/character.cpp
++++ b/apps/openmw/mwmechanics/character.cpp
+@@ -324,7 +324,7 @@ void CharacterController::refreshJumpAnims(const std::string& weapShortGroup, Ju
+ {
+     if (!force && jump == mJumpState && idle == CharState_None)
+         return;
+-
++    
+     std::string jumpAnimName;
+     MWRender::Animation::BlendMask jumpmask = MWRender::Animation::BlendMask_All;
+     if (jump != JumpState_None)
+@@ -513,7 +513,6 @@ void CharacterController::refreshMovementAnims(const std::string& weapShortGroup
+                     // For upper body there will be idle animation.
+                     if (movemask == MWRender::Animation::BlendMask_LowerBody && idle == CharState_None)
+                         idle = CharState_Idle;
+-
+                     if (movemask == MWRender::Animation::BlendMask_LowerBody)
+                         resetIdle = false;
+                 }
 diff --git a/components/crashcatcher/crashcatcher.cpp b/components/crashcatcher/crashcatcher.cpp
-index 2e2ddd1..e9400cf 100644
+index 006ab2d..0d7311b 100644
 --- a/components/crashcatcher/crashcatcher.cpp
 +++ b/components/crashcatcher/crashcatcher.cpp
 @@ -12,7 +12,9 @@
@@ -246,20 +303,24 @@ index fd8f0d1..5b1bc71 100644
  #else
      #define USE_CRASH_CATCHER 0
 diff --git a/components/debug/debugging.cpp b/components/debug/debugging.cpp
-index e89a659..04441dd 100644
+index dfed077..220d766 100644
 --- a/components/debug/debugging.cpp
 +++ b/components/debug/debugging.cpp
-@@ -52,6 +52,9 @@ namespace Debug
+@@ -88,10 +88,9 @@ namespace Debug
  
  int wrapApplication(int (*innerApplication)(int argc, char *argv[]), int argc, char *argv[], const std::string& appName)
  {
+-#if defined _WIN32
+-    (void)Debug::attachParentConsole();
+-#endif
+-
 +#ifdef __HAIKU
 +	return innerApplication(argc, argv);
 +#else
      // Some objects used to redirect cout and cerr
      // Scope must be here, so this still works inside the catch block for logging exceptions
      std::streambuf* cout_rdbuf = std::cout.rdbuf ();
-@@ -113,4 +116,5 @@ int wrapApplication(int (*innerApplication)(int argc, char *argv[]), int argc, c
+@@ -154,4 +153,5 @@ int wrapApplication(int (*innerApplication)(int argc, char *argv[]), int argc, c
      std::cerr.rdbuf(cerr_rdbuf);
  
      return ret;
@@ -279,7 +340,7 @@ index 2e72b81..97c43f0 100644
      #include <components/files/linuxpath.hpp>
      namespace Files { typedef LinuxPath TargetPathType; }
 diff --git a/components/files/linuxpath.cpp b/components/files/linuxpath.cpp
-index 3743eef..13c9451 100644
+index c3dead2..dc6d2b0 100644
 --- a/components/files/linuxpath.cpp
 +++ b/components/files/linuxpath.cpp
 @@ -1,6 +1,6 @@
@@ -290,7 +351,7 @@ index 3743eef..13c9451 100644
  
  #include <pwd.h>
  #include <unistd.h>
-@@ -54,17 +54,32 @@ LinuxPath::LinuxPath(const std::string& application_name)
+@@ -58,17 +58,32 @@ LinuxPath::LinuxPath(const std::string& application_name)
  
  boost::filesystem::path LinuxPath::getUserConfigPath() const
  {
@@ -336,32 +397,19 @@ index 7950157..32ff3d8 100644
  
  #include <boost/filesystem.hpp>
  
+diff --git a/files/openmw.appdata.xml b/files/openmw.appdata.xml
+index edbeb1a..8924636 100644
+--- a/files/openmw.appdata.xml
++++ b/files/openmw.appdata.xml
+@@ -44,7 +44,7 @@ Copyright 2020 Bret Curtis <psi29a@gmail.com>
+   <category>RolePlaying</category>
+  </categories>
+  <releases>
+-  <release version="@OPENMW_VERSION@" date="@OPENMW_VERSION_COMMITDATE@"/>
++  <release version="0.46.0" date="2018-10-30"/>
+  </releases>
+  <url type="homepage">https://openmw.org</url>
+  <url type="bugtracker">https://gitlab.com/OpenMW/openmw/issues</url>
 -- 
-2.19.1
-
-
-From e7155ea818a5f48ef927752e8d6f5d1db2e42652 Mon Sep 17 00:00:00 2001
-From: Gerasim Troeglazov <3dEyes@gmail.com>
-Date: Sun, 7 Oct 2018 16:49:50 +1000
-Subject: Remove SDL_WINDOW_RESIZABLE flag for haiku
-
-
-diff --git a/apps/openmw/engine.cpp b/apps/openmw/engine.cpp
-index f5b4171..897b3e1 100644
---- a/apps/openmw/engine.cpp
-+++ b/apps/openmw/engine.cpp
-@@ -336,7 +336,11 @@ void OMW::Engine::createWindow(Settings::Manager& settings)
-         pos_y = SDL_WINDOWPOS_UNDEFINED_DISPLAY(screen);
-     }
- 
-+#ifdef __HAIKU__
-+	Uint32 flags = SDL_WINDOW_OPENGL|SDL_WINDOW_SHOWN;
-+#else
-     Uint32 flags = SDL_WINDOW_OPENGL|SDL_WINDOW_SHOWN|SDL_WINDOW_RESIZABLE;
-+#endif
-     if(fullscreen)
-         flags |= SDL_WINDOW_FULLSCREEN;
- 
--- 
-2.19.1
+2.30.0
 
